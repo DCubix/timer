@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const WebSocket = require('ws');
 const cors = require('cors');
+const path = require('path');
 
 const { TimerEntry } = require('./database.js');
 const app = express();
@@ -143,7 +144,8 @@ wss.on('connection', (ws) => {
     console.log('Client connected.');
 });
 
-app.use(express.static('public'));
+const publicPath = path.join(__dirname, 'public');
+app.use(express.static(publicPath));
 app.use(bodyParser.json());
 app.use(cors());
 
@@ -390,7 +392,7 @@ app.post('/api/panic', async (req, res) => {
 
 // read port from public/config.json
 const fs = require('fs');
-const config = JSON.parse(fs.readFileSync('public/config.json'));
+const config = JSON.parse(fs.readFileSync(`${publicPath}/config.json`));
 const port = config.port || 5454;
 const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
