@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebTimer &bullet; Controlador</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/modern-normalize" />
+    <link rel="stylesheet" href="simple.min.css" />
+
+    <style type="text/css">
+        /* Menu styling, buttons gap */
+        .menu {
+            gap: 10px;
+        }
+
+        button {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-sizing: border-box;
+        }
+
+        button.icon {
+            width: 32px;
+            height: 32px;
+            justify-content: center;
+            padding: 0;
+        }
+
+        button.secondary {
+            background-color: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        button.secondary:hover {
+            background-color: var(--accent);
+            color: var(--bg);
+            border: none;
+        }
+
+        #app {
+            color: var(--text);
+            font-size: 1.15rem;
+            line-height: 1.5;
+            display: grid;
+            grid-template-columns: 1fr min(45rem,90%) 1fr;
+            margin: 0;
+            grid-column: 1 / -1;
+        }
+
+        #app > * {
+            grid-column: 2;
+        }
+
+        #app > header { 
+            background: var(--accent-bg);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            padding: 0 0.5rem 2rem 0.5rem;
+            grid-column: 1 / -1;
+            box-sizing: border-box;
+        }
+        
+        #app > header h1 {
+            max-width: 1200px;
+            margin: 1rem auto;
+        }
+        
+        #app > header p {
+            max-width: 40rem;
+            margin: 1rem auto;
+        }
+        
+        #app > footer {
+            margin-top: 4rem;
+            padding: 2rem 1rem 1.5rem 1rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+
+        .timer {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .time-input {
+            font-size: 2rem;
+            width: 80px;
+            text-align: center;
+        }
+
+        .list-box {
+            color: var(--text);
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            font-size: inherit;
+            font-family: inherit;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            margin-top: 0;
+            border-radius: var(--standard-border-radius);
+            box-shadow: none;
+            max-width: 100%;
+            display: inline-block;
+        }
+
+        .list-box li {
+            list-style: none;
+        }
+
+        .item-crono {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+    </style>
+
+    <script src="https://kit.fontawesome.com/475efe1b0b.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h3>WebTimer &bullet; Controlador</h3>
+            <nav>
+                <ul class="menu">
+                    <li><button :class="{ secondary: page !== 'TIME' }" @click="page='TIME'"><i class="fa-solid fa-stopwatch"></i> Timer</button></li>
+                    <li><button :class="{ secondary: page !== 'AUTO' }" @click="page='AUTO'"><i class="fa-solid fa-robot"></i> Automação</button></li>
+                    <li><button :class="{ secondary: page !== 'CRON' }" @click="page='CRON'" :disabled="appState.timerState !== 'STOPPED'"><i class="fa-solid fa-list"></i> Cronogramas</button></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <section style="margin-top: 10px" v-show="page === 'TIME'">
+                <article>
+                    <header>
+                        <h4 style="margin: 0">Timer</h4>
+                    </header>
+                    <div class="timer" v-if="appState.timerState === 'STOPPED'">
+                        <div>
+                            <label for="in_h">Horas</label>
+                            <input id="in_h" type="number" class="time-input" v-model="hh" :disabled="appState.timerMode !== 'SINGLE'" />
+                        </div>
+                        <div>
+                            <label for="in_m">Minutos</label>
+                            <input id="in_m" type="number" class="time-input" v-model="mm" :disabled="appState.timerMode !== 'SINGLE'" />
+                        </div>
+                        <div>
+                            <label for="in_s">Segundos</label>
+                            <input id="in_s" type="number" class="time-input" v-model="ss" :disabled="appState.timerMode !== 'SINGLE'" />
+                        </div>
+                    </div>
+                    <h2 class="timer" v-if="appState.timerState !== 'STOPPED'">{{ appState.timerValue | time }}</h2>
+                    <div style="display: flex; justify-content: center; gap: 1rem;">
+                        <button
+                            v-show="appState.timerState === 'STOPPED'"
+                            @click="startTimer">
+                            <i class="fa-solid fa-play"></i> Iniciar
+                        </button>
+                        <button
+                            v-show="appState.timerState === 'PAUSED'"
+                            @click="startTimer">
+                            <i class="fa-solid fa-play"></i> Continuar
+                        </button>
+                        <button
+                            v-show="appState.timerState === 'RUNNING'"
+                            @click="pauseTimer">
+                            <i class="fa-solid fa-pause"></i> Pausar
+                        </button>
+                        <button
+                            :disabled="appState.timerState === 'STOPPED'"
+                            @click="stopTimer">
+                            <i class="fa-solid fa-stop"></i> Parar
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <div style="flex: 1">
+                            <label for="in_cron">Cronograma</label>
+                            <select id="in_cron" style="width: 100%;" v-model="listaSelecionada" :disabled="appState.timerState !== 'STOPPED'">
+                                <option v-for="l in nomesListas" :value="l">{{ l }}</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1">
+                            <label for="in_time">Timer</label>
+                            <select
+                                id="in_time"
+                                style="width: 100%;"
+                                v-model="tempoSelecionado"
+                                @change="setTempo(getTempo(listaSelecionada, tempoSelecionado).timeSeconds)"
+                                :disabled="appState.timerState !== 'STOPPED'">
+                                <option v-for="t in getLista(listaSelecionada)" :value="t.id">{{ t.description }} ({{ t.timeSeconds | time }})</option>
+                            </select>
+                        </div>
+                    </div>
+                </article>
+
+                <div style="display: flex; justify-content: space-between;">
+                    <a class="button" href="./view.html" target="_blank">
+                        <i class="fa-solid fa-television"></i> Abrir Visualização
+                    </a>
+                    <button
+                        class="secondary"
+                        @click="panicAction">
+                        <i class="fa-solid fa-warning"></i> Pânico!
+                    </button>
+                </div>
+            </section>
+
+            <section style="margin-top: 10px" v-show="page === 'CRON'">
+                <article>
+                    <header>
+                        <h4 style="margin: 0">Cronogramas</h4>
+                    </header>
+                    <div>
+                        <label for="in_lista_cron">Lista</label>
+                        <select id="in_lista_cron" style="width: 100%;" v-model="listaSelecionada">
+                            <option v-for="l in nomesListas" :value="l">{{ l }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="in_tempos_cron">Timers</label>
+                        <ul id="in_tempos_cron" class="list-box" style="width: 100%; min-height: 400px; max-height: 400px; overflow-y: scroll;">
+                            <li v-for="(t, i) in getLista(listaSelecionada)">
+                                <div class="item-crono">
+                                    <div style="display: flex; flex-direction: column; flex: 1;">
+                                        <span style="font-size: 1.3rem;">{{ t.description }}</span>
+                                        <span style="font-size: 1.1rem; opacity: 0.7;">{{ t.timeSeconds | time }}</span>
+                                    </div>
+                                    <div style="display: flex; gap: 6px;">
+                                        <button @click="moverTimerAcima(t)" class="secondary icon" v-if="i > 0"><i class="fa-solid fa-chevron-up"></i></button>
+                                        <button @click="moverTimerAbaixo(t)" class="secondary icon" v-if="i < getLista(listaSelecionada).length-1"><i class="fa-solid fa-chevron-down"></i></button>
+                                        <button @click="dlgEditarShow(t)" class="secondary icon"><i class="fa-solid fa-pencil"></i></button>
+                                        <button @click="actionDelete(t.id)" class="secondary icon"><i class="fa-solid fa-trash-can"></i></button>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 1rem;">
+                        <button @click="dlgAdicionarShow">
+                            <i class="fa-solid fa-plus"></i> Adicionar
+                        </button>
+                    </div>
+                </article>
+            </section>
+
+            <section style="margin-top: 10px" v-show="page === 'AUTO'">
+                <article>
+                    <header>
+                        <h4 style="margin: 0">Automação</h4>
+                    </header>
+                    <h2 class="timer" style="margin-top: 12px; margin-bottom: 5px;">{{ appState.timerValue | time }}</h2>
+                    <div style="display: flex; justify-content: center; gap: 1rem;">
+                        <button
+                            :disabled="automationListSecionada.length <= 0 || appState.timerState !== 'STOPPED'"
+                            @click="startAutomacao">
+                            <i class="fa-solid fa-play"></i> Iniciar
+                        </button>
+                        <button
+                            v-show="appState.timerState === 'RUNNING'"
+                            @click="pauseTimer">
+                            <i class="fa-solid fa-pause"></i> Pausar
+                        </button>
+                        <button
+                            :disabled="appState.timerState === 'STOPPED'"
+                            @click="stopAutomacao">
+                            <i class="fa-solid fa-stop"></i> Parar
+                        </button>
+                    </div>
+                    <div>
+                        <label for="in_lista_cron">Lista</label>
+                        <select id="in_lista_cron" style="width: 100%;" v-model="automationListSecionada">
+                            <option v-for="l in nomesListas" :value="l">{{ l }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="in_tempos_cron">Timers</label>
+                        <ul id="in_tempos_cron" class="list-box" style="width: 100%; min-height: 400px; max-height: 400px; overflow-y: scroll;">
+                            <li v-for="(t, i) in getLista(automationListSecionada)">
+                                <div class="item-crono">
+                                    <div style="display: flex; flex-direction: column; flex: 1;">
+                                        <span style="font-size: 1.3rem;">{{ t.description }}</span>
+                                        <span style="font-size: 1.1rem; opacity: 0.7;">{{ t.timeSeconds | time }}</span>
+                                    </div>
+                                    <div style="display: flex; gap: 6px; align-items: center;">
+                                        <i class="fa-solid fa-play" style="color: #44d009" v-if="t.id === currentTimer.id && appState.timerMode !== 'SINGLE' && appState.timerState !== 'WAITING'"></i>
+                                        <i class="fa-solid fa-hourglass-half" v-if="t.id === currentTimer.id && appState.timerState === 'WAITING'"></i>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div>
+                        <label for="in_tempo_espera_cron">Tempo de Espera Entre Timers (s)</label>
+                        <input id="in_tempo_espera_cron" type="number" style="width: 100%;" v-model="automationWaitTime" :disabled="appState.timerMode !== 'QUEUE' && appState.timerState !== 'STOPPED'" />
+                    </div>
+                </article>
+            </section>
+        </main>
+
+        <!-- Dialog adicionar/editar -->
+        <dialog ref="addEditModal" style="margin: 0 auto; margin-top: 5rem;">
+            <datalist id="listas">
+                <option v-for="l in nomesListas" :value="l">{{ l }}</option>
+            </datalist>
+
+            <header>
+                <h4 style="margin-top: 0">{{ dialog.title }}</h4>
+            </header>
+            <form>
+                <div>
+                    <label for="in_lista_cron">Lista</label>
+                    <input id="in_lista_cron" list="listas" style="width: 100%;" v-model="dialog.lista" required />
+                </div>
+                <div>
+                    <label for="in_descricao">Descrição</label>
+                    <input id="in_descricao" type="text" style="width: 100%;" v-model="dialog.descricao" required />
+                </div>
+                <div class="timer">
+                    <div>
+                        <label for="in_h_dlg">Horas</label>
+                        <input id="in_h_dlg" type="number" class="time-input" v-model="dialog.hh" required />
+                    </div>
+                    <div>
+                        <label for="in_m_dlg">Minutos</label>
+                        <input id="in_m_dlg" type="number" class="time-input" v-model="dialog.mm" required />
+                    </div>
+                    <div>
+                        <label for="in_s_dlg">Segundos</label>
+                        <input id="in_s_dlg" type="number" class="time-input" v-model="dialog.ss" required />
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 1rem;">
+                    <button :disabled="dialog.loading" class="secondary" @click="dlgClose" type="button"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+                    <button :disabled="dialog.loading" @click="dlg_actionSalvarNovo" v-if="dialog.id === null"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+                    <button :disabled="dialog.loading" @click="dlg_actionSalvarEditar" v-if="dialog.id !== null"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+                </div>
+            </form>
+        </dialog>
+    </div>
+    
+    <script src="vue.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
